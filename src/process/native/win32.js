@@ -16,6 +16,7 @@ const UNICODE_STRING = koffi.struct('UNICODE_STRING', {
   Buffer: HANDLE
 });
 
+// https://www.geoffchappell.com/studies/windows/km/ntoskrnl/api/ex/sysinfo/process_id.htm
 const SYSTEM_PROCESS_ID_INFORMATION = koffi.struct('SYSTEM_PROCESS_ID_INFORMATION', {
   ProcessId: HANDLE,
   ImageName: UNICODE_STRING
@@ -23,6 +24,7 @@ const SYSTEM_PROCESS_ID_INFORMATION = koffi.struct('SYSTEM_PROCESS_ID_INFORMATIO
 
 const EnumProcesses = psapi.func('BOOL __stdcall EnumProcesses(_Out_ DWORD *lpidProcess, DWORD cb, _Out_ DWORD *lpcbNeeded)')
 const GetLastError = kernel32.func('DWORD GetLastError()')
+// https://learn.microsoft.com/en-us/windows/win32/api/winternl/nf-winternl-ntquerysysteminformation
 const NtQuerySystemInformation = ntdll.func('NtQuerySystemInformation', 'int32', ['int32', 'SYSTEM_PROCESS_ID_INFORMATION*', 'uint32', HANDLE]);
 
 const SystemProcessIdInformation = 88; // SYSTEM_INFORMATION_CLASS enum value for SystemProcessIdInformation
@@ -31,7 +33,8 @@ const STATUS_INFO_LENGTH_MISMATCH = 0xC0000004;
 const NT_SUCCESS = (status) => status >= 0;
 const NT_ERROR = (status) => status < 0;
 
-// Using undocumented function NtQuerySystemInformation()
+// Using internal function NtQuerySystemInformation()
+// with undocumented class SYSTEM_PROCESS_ID_INFORMATION
 // to circumvent limited privilege of wmic or gwmi
 // when querying executable path of a process
 const getProcessImageName = (pid) => {
@@ -57,6 +60,10 @@ const getProcessImageName = (pid) => {
 
       if (NT_SUCCESS(result)) {
         return buffer.subarray(0, buffer.length).toString('utf16le');
+      }
+
+      if (bufferSize >= 0xffff) {
+        console.error(`NtQuerySystemInformation() failed with pid = ${pid}, result could not fit in buffer of size 0xffff`)
       }
 
       bufferSize *= 2;
