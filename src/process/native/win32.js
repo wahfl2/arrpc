@@ -63,7 +63,8 @@ const getProcessImageName = (pid) => {
       }
 
       if (bufferSize >= 0xffff) {
-        console.error(`NtQuerySystemInformation() failed with pid = ${pid}, result could not fit in buffer of size 0xffff`)
+        console.error(`NtQuerySystemInformation() failed with pid = ${pid}, result could not fit in buffer of size 0xffff`);
+        return null;
       }
 
       bufferSize *= 2;
